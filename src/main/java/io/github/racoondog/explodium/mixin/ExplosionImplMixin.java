@@ -138,10 +138,9 @@ public abstract class ExplosionImplMixin {
                 prevChunkY = chunkY;
                 prevChunkZ = chunkZ;
 
-                int steps = 1;
-                steps = Math.max(steps, calculateSteps(normX, chunkX, stepX));
-                steps = Math.max(steps, calculateSteps(normY, chunkY, stepY));
-                steps = Math.max(steps, calculateSteps(normZ, chunkZ, stepZ));
+                int steps = calculateSteps(normX, chunkX, stepX);
+                steps = Math.min(steps, calculateSteps(normY, chunkY, stepY));
+                steps = Math.min(steps, calculateSteps(normZ, chunkZ, stepZ));
 
                 strength -= 0.22500001F * steps;
                 stepX += normX * steps;
