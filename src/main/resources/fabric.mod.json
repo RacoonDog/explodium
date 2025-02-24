@@ -3,7 +3,7 @@
 	"id": "explodium",
 	"version": "${version}",
 	"name": "Explodium",
-	"description": "A Fabric mod designed to push the limit of Minecraft tnt explosion performance.",
+	"description": "A Fabric mod designed to push the limits of Minecraft tnt chained explosion performance.",
 	"authors": [
 		"Crosby"
 	],
