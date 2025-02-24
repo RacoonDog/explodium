@@ -10,6 +10,11 @@ base {
 }
 
 repositories {
+	maven {
+		name = "bawnorton"
+		url = "https://maven.bawnorton.com/releases"
+	}
+
 	exclusiveContent {
 		forRepository {
 			maven {
@@ -28,7 +33,9 @@ dependencies {
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	modCompileOnly("maven.modrinth:lithium:mc1.21.4-0.14.8-fabric") { transitive = false }
+	modImplementation("maven.modrinth:lithium:mc1.21.4-0.14.8-fabric") { transitive = false }
+
+	include(implementation(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-fabric:0.2.0")))
 }
 
 processResources {

@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"id": "explodim",
+	"id": "explodium",
 	"version": "${version}",
 	"name": "Explodium",
 	"description": "A Fabric mod designed to push the limit of Minecraft tnt explosion performance.",
@@ -25,9 +25,7 @@
 	"depends": {
 		"fabricloader": ">=0.16.10",
 		"minecraft": "~1.21.4",
-		"java": ">=21"
-	},
-	"suggests": {
+		"java": ">=21",
 		"lithium": "*"
 	}
 }
