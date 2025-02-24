@@ -3,6 +3,7 @@ package io.github.racoondog.explodium;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.world.explosion.ExplosionImpl;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -48,6 +49,9 @@ public class Explodium implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+			Metrics.registerCommands();
+		}
 	}
 
 	public static float invokeTraverseBlock(ExplosionImpl explosion, float strength, int blockX, int blockY, int blockZ, LongOpenHashSet touched) {

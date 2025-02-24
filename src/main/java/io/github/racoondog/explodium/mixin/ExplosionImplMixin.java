@@ -6,8 +6,10 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import io.github.racoondog.explodium.Constants;
 import io.github.racoondog.explodium.Explodium;
+import io.github.racoondog.explodium.Metrics;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.caffeinemc.mods.lithium.common.util.Pos;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -23,6 +25,7 @@ import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.lang.invoke.MethodHandles;
 
@@ -57,6 +60,13 @@ public abstract class ExplosionImplMixin {
         sectionY = ChunkSectionPos.getSectionCoord(pos.y);
         sectionZ = ChunkSectionPos.getSectionCoord(pos.z);
         isSectionEmpty = isSectionEmpty(sectionX, sectionY, sectionZ);
+
+        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+            Metrics.explosions.getAndIncrement();
+            if (isSectionEmpty) {
+                Metrics.explosionsInEmptySection.getAndIncrement();
+            }
+        }
     }
 
     /**
@@ -73,10 +83,25 @@ public abstract class ExplosionImplMixin {
             && entity.getChunkPos().x == sectionX
             && entity.getChunkPos().z == sectionZ
             && ChunkSectionPos.getSectionCoord(entity.getY()) == sectionY) {
+
+            if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+                Metrics.entityRaycastsSkipped.getAndIncrement();
+            }
+
             return 1f;
         }
 
         return original.call(pos, entity);
+    }
+
+    @Inject(
+        method = "calculateReceivedDamage",
+        at = @At("RETURN")
+    )
+    private static void collectMetrics(Vec3d pos, Entity entity, CallbackInfoReturnable<Float> cir) {
+        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+            Metrics.entityRaycastCallback(entity.getType(), cir.getReturnValue());
+        }
     }
 
     /**
@@ -115,6 +140,10 @@ public abstract class ExplosionImplMixin {
                                 @Local(name = "stepX") double stepX, @Local(name = "stepY") double stepY, @Local(name = "stepZ") double stepZ,
                                 @Local(name = "prevX") int prevX, @Local(name = "prevY") int prevY, @Local(name = "prevZ") int prevZ, @Local(name = "prevResistance") float prevResistance,
                                 @Local(name = "boundMinY") int boundMinY, @Local(name = "boundMaxY") int boundMaxY) {
+        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+            Metrics.blockRaycasts.getAndIncrement();
+        }
+
         int prevChunkX = Integer.MIN_VALUE;
         int prevChunkY = Integer.MIN_VALUE;
         int prevChunkZ = Integer.MIN_VALUE;
@@ -134,6 +163,10 @@ public abstract class ExplosionImplMixin {
             int chunkY = ChunkSectionPos.getSectionCoord(blockY);
             int chunkZ = ChunkSectionPos.getSectionCoord(blockZ);
             if (prevChunkX != chunkX && prevChunkY != chunkY && prevChunkZ != chunkZ && isSectionEmpty(chunkX, chunkY, chunkZ)) {
+                if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+                    Metrics.blockRaycastsIntersectEmptySection.getAndIncrement();
+                }
+
                 prevChunkX = chunkX;
                 prevChunkY = chunkY;
                 prevChunkZ = chunkZ;
