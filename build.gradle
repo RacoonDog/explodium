@@ -34,7 +34,8 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	modImplementation(fabricApi.module("fabric-command-api-v2", "0.118.0+1.21.4"))
-	modImplementation("maven.modrinth:lithium:mc1.21.4-0.14.8-fabric") { transitive = false }
+	//modImplementation("maven.modrinth:lithium:mc1.21.4-0.14.8-fabric") { transitive = false }
+	modImplementation(files("libs/lithium-fabric-0.14.8-snapshot+mc1.21.4-local.jar"))
 
 	include(implementation(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-fabric:0.2.0")))
 }

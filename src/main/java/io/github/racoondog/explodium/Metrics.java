@@ -5,14 +5,12 @@ import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextColor;
+import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
@@ -24,6 +22,7 @@ import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class Metrics {
     private static final ConcurrentHashMap<EntityType<?>, Integer> RAYS_PER_ENTITY = new ConcurrentHashMap<>();
+    public static final boolean CAPTURE_METRICS = FabricLoader.getInstance().isDevelopmentEnvironment() || Boolean.getBoolean("explodium.metrics");
 
     public static final AtomicLong explosions = new AtomicLong();
     public static final AtomicLong explosionsInEmptySection = new AtomicLong();
@@ -49,7 +48,7 @@ public class Metrics {
                 ctx.getSource().sendMessage(title("Explodium Metrics"));
                 ctx.getSource().sendMessage(base().append(value(explosions)).append(" total explosions."));
                 ctx.getSource().sendMessage(base().append(value(explosionsInEmptySection)).append(" explosions in empty sections, or ").append(value("%.2f%%", explosionEmptySectionPercent)).append("."));
-                ctx.getSource().sendMessage(base().append(" ----- "));
+                ctx.getSource().sendMessage(divider());
                 ctx.getSource().sendMessage(base().append(value(entityRaycasts)).append(" total entity raycasts issued."));
                 ctx.getSource().sendMessage(base().append(value("%.2f", entityRaycastPerExplosionAvg)).append(" entity raycasts issued per explosion average."));
                 ctx.getSource().sendMessage(base().append(value(entityRaycastsSkipped)).append(" total entity raycasts skipped from empty sections, or ").append(value("%.2f%%", entityRaycastSkipPercent)).append("."));
@@ -58,7 +57,7 @@ public class Metrics {
                 ctx.getSource().sendMessage(base().append(value("%.2f", raysPerRaycastAvg)).append(" entity rays cast per entity average."));
                 ctx.getSource().sendMessage(base().append(value("%.2f%%", entityRaycastResultAvg)).append(" entity raycast average result."));
                 ctx.getSource().sendMessage(base().append(value("%.2f%%", entityRaycastIsAbsolutePercent)).append(" entity raycast result is absolute (full cover or no cover)."));
-                ctx.getSource().sendMessage(base().append(" ----- "));
+                ctx.getSource().sendMessage(divider());
                 ctx.getSource().sendMessage(base().append(value(blockRaycasts)).append(" total block raycasts."));
                 ctx.getSource().sendMessage(base().append(value(blockRaycastsIntersectEmptySection)).append(" times block raycasts intersected with empty sections."));
 
@@ -84,6 +83,10 @@ public class Metrics {
         if (result == 0f || result == 1f) {
             entityRaycastResultIsAbsolute.getAndIncrement();
         }
+    }
+
+    private static Text divider() {
+        return Text.literal(" -------------------").formatted(Formatting.DARK_GRAY);
     }
 
     private static MutableText base() {

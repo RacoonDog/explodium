@@ -9,7 +9,6 @@ import io.github.racoondog.explodium.Explodium;
 import io.github.racoondog.explodium.Metrics;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.caffeinemc.mods.lithium.common.util.Pos;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -61,7 +60,7 @@ public abstract class ExplosionImplMixin {
         sectionZ = ChunkSectionPos.getSectionCoord(pos.z);
         isSectionEmpty = isSectionEmpty(sectionX, sectionY, sectionZ);
 
-        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        if (Metrics.CAPTURE_METRICS) {
             Metrics.explosions.getAndIncrement();
             if (isSectionEmpty) {
                 Metrics.explosionsInEmptySection.getAndIncrement();
@@ -84,7 +83,7 @@ public abstract class ExplosionImplMixin {
             && entity.getChunkPos().z == sectionZ
             && ChunkSectionPos.getSectionCoord(entity.getY()) == sectionY) {
 
-            if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+            if (Metrics.CAPTURE_METRICS) {
                 Metrics.entityRaycastsSkipped.getAndIncrement();
             }
 
@@ -99,7 +98,7 @@ public abstract class ExplosionImplMixin {
         at = @At("RETURN")
     )
     private static void collectMetrics(Vec3d pos, Entity entity, CallbackInfoReturnable<Float> cir) {
-        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        if (Metrics.CAPTURE_METRICS) {
             Metrics.entityRaycastCallback(entity.getType(), cir.getReturnValue());
         }
     }
@@ -140,7 +139,7 @@ public abstract class ExplosionImplMixin {
                                 @Local(name = "stepX") double stepX, @Local(name = "stepY") double stepY, @Local(name = "stepZ") double stepZ,
                                 @Local(name = "prevX") int prevX, @Local(name = "prevY") int prevY, @Local(name = "prevZ") int prevZ, @Local(name = "prevResistance") float prevResistance,
                                 @Local(name = "boundMinY") int boundMinY, @Local(name = "boundMaxY") int boundMaxY) {
-        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        if (Metrics.CAPTURE_METRICS) {
             Metrics.blockRaycasts.getAndIncrement();
         }
 
@@ -163,7 +162,7 @@ public abstract class ExplosionImplMixin {
             int chunkY = ChunkSectionPos.getSectionCoord(blockY);
             int chunkZ = ChunkSectionPos.getSectionCoord(blockZ);
             if (prevChunkX != chunkX && prevChunkY != chunkY && prevChunkZ != chunkZ && isSectionEmpty(chunkX, chunkY, chunkZ)) {
-                if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+                if (Metrics.CAPTURE_METRICS) {
                     Metrics.blockRaycastsIntersectEmptySection.getAndIncrement();
                 }
 
