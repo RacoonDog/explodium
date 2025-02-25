@@ -10,7 +10,10 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.*;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
+import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
@@ -21,16 +24,17 @@ import java.util.concurrent.atomic.AtomicLong;
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class Metrics {
-    private static final ConcurrentHashMap<EntityType<?>, Integer> RAYS_PER_ENTITY = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<EntityType<?>, EntityEntry> RAYS_PER_ENTITY = new ConcurrentHashMap<>();
     public static final boolean CAPTURE_METRICS = FabricLoader.getInstance().isDevelopmentEnvironment() || Boolean.getBoolean("explodium.metrics");
 
     public static final AtomicLong explosions = new AtomicLong();
     public static final AtomicLong explosionsInEmptySection = new AtomicLong();
     public static final AtomicLong entityRaycasts = new AtomicLong();
     public static final AtomicLong entityRaycastsSkipped = new AtomicLong();
-    private static final AtomicLong entityRays = new AtomicLong();
+    public static final AtomicLong entityRays = new AtomicLong();
     public static final AtomicDouble entityRaycastResultTotal = new AtomicDouble();
     public static final AtomicLong entityRaycastResultIsAbsolute = new AtomicLong();
+    public static final AtomicLong entityRaycastResultLowRes = new AtomicLong();
     public static final AtomicLong blockRaycasts = new AtomicLong();
     public static final AtomicLong blockRaycastsIntersectEmptySection = new AtomicLong();
 
@@ -44,6 +48,7 @@ public class Metrics {
                 double raysPerRaycastAvg = (double) entityRays.get() / entityRaycasts.get();
                 double entityRaycastResultAvg = (entityRaycastResultTotal.get() / entityRaycasts.get()) * 100;
                 double entityRaycastIsAbsolutePercent = ((double) entityRaycastResultIsAbsolute.get() / entityRaycasts.get()) * 100;
+                double entityRaycastLowResPercent = ((double) entityRaycastResultLowRes.get() / entityRaycasts.get()) * 100;
 
                 ctx.getSource().sendMessage(title("Explodium Metrics"));
                 ctx.getSource().sendMessage(base().append(value(explosions)).append(" total explosions."));
@@ -57,6 +62,7 @@ public class Metrics {
                 ctx.getSource().sendMessage(base().append(value("%.2f", raysPerRaycastAvg)).append(" entity rays cast per entity average."));
                 ctx.getSource().sendMessage(base().append(value("%.2f%%", entityRaycastResultAvg)).append(" entity raycast average result."));
                 ctx.getSource().sendMessage(base().append(value("%.2f%%", entityRaycastIsAbsolutePercent)).append(" entity raycast result is absolute (full cover or no cover)."));
+                ctx.getSource().sendMessage(base().append(value(entityRaycastResultLowRes)).append(" entity raycasts done with lowered resolution, or ").append(value("%.2f%%", entityRaycastLowResPercent)).append("."));
                 ctx.getSource().sendMessage(divider());
                 ctx.getSource().sendMessage(base().append(value(blockRaycasts)).append(" total block raycasts."));
                 ctx.getSource().sendMessage(base().append(value(blockRaycastsIntersectEmptySection)).append(" times block raycasts intersected with empty sections."));
@@ -66,8 +72,16 @@ public class Metrics {
             .then(literal("getEntityRaycasts").executes(ctx -> {
                 ctx.getSource().sendMessage(title("Entity Raycasts Issued"));
 
-                RAYS_PER_ENTITY.forEach((key, value) -> {
-                    ctx.getSource().sendMessage(base().append(value(value)).append(" rays per ").append(key.getName()).append(" entity."));
+                RAYS_PER_ENTITY.forEach((key, entry) -> {
+                    ctx.getSource().sendMessage(base()
+                        .append(value(entry.normalResSamplePoints()))
+                        .append("/")
+                        .append(value(entry.lowResSamplePoints()))
+                        .append(" rays per ")
+                        .append(key.getName())
+                        .append(" entity (")
+                        .append(value(entry.occurrences()))
+                        .append(" occurrences.)"));
                 });
 
                 return SINGLE_SUCCESS;
@@ -77,8 +91,7 @@ public class Metrics {
 
     public static void entityRaycastCallback(EntityType<?> entityType, float result) {
         entityRaycasts.getAndIncrement();
-        int rays = RAYS_PER_ENTITY.computeIfAbsent(entityType, Metrics::calcEntityRaycasts);
-        entityRays.getAndAdd(rays);
+        RAYS_PER_ENTITY.computeIfAbsent(entityType, Metrics::createEntityEntry).occurrences().getAndIncrement();
         entityRaycastResultTotal.getAndAdd(result);
         if (result == 0f || result == 1f) {
             entityRaycastResultIsAbsolute.getAndIncrement();
@@ -108,13 +121,20 @@ public class Metrics {
             .setStyle(Style.EMPTY.withColor(Formatting.GREEN));
     }
 
-    private static <T extends Entity> int calcEntityRaycasts(EntityType<T> entityType) {
+    private static <T extends Entity> EntityEntry createEntityEntry(EntityType<T> entityType) {
         EntityDimensions dimensions = entityType.getDimensions();
-        double d = 1.0 / (dimensions.width() * 2.0 + 1.0);
-        double e = 1.0 / (dimensions.height() * 2.0 + 1.0);
-        double f = 1.0 / (dimensions.width() * 2.0 + 1.0);
+        double xStep = 1.0 / (dimensions.width() * 2.0 + 1.0);
+        double yStep = 1.0 / (dimensions.height() * 2.0 + 1.0);
+        double zStep = 1.0 / (dimensions.width() * 2.0 + 1.0);
 
-        return MathHelper.ceil(1 / d) * MathHelper.ceil(1 / e) * MathHelper.ceil(1 / f);
+        double xStepLowRes = Math.min(1.0, xStep * 3.0 / 2.0);
+        double yStepLowRes = Math.min(1.0, yStep * 3.0 / 2.0);
+        double zStepLowRes = Math.min(1.0, zStep * 3.0 / 2.0);
+
+        int normalResSamplePoints = MathHelper.ceil(1 / xStep) * MathHelper.ceil(1 / yStep) * MathHelper.ceil(1 / zStep);
+        int lowResSamplePoints = MathHelper.ceil(1 / xStepLowRes) * MathHelper.ceil(1 / yStepLowRes) * MathHelper.ceil(1 / zStepLowRes);
+
+        return new EntityEntry(normalResSamplePoints, lowResSamplePoints, new AtomicLong());
     }
 
     private static LiteralArgumentBuilder<ServerCommandSource> literal(String name) {
@@ -124,4 +144,6 @@ public class Metrics {
     private static <T> RequiredArgumentBuilder<ServerCommandSource, T> argument(String name, ArgumentType<T> type) {
         return RequiredArgumentBuilder.argument(name, type);
     }
+
+    private record EntityEntry(int normalResSamplePoints, int lowResSamplePoints, AtomicLong occurrences) { }
 }

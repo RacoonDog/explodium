@@ -17,6 +17,9 @@
 	"entrypoints": {
 		"main": [
 			"io.github.racoondog.explodium.Explodium"
+		],
+		"mixinsquared": [
+			"io.github.racoondog.explodium.LithiumMixinCanceller"
 		]
 	},
 	"mixins": [
