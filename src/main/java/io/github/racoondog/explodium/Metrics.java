@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -30,10 +31,11 @@ public class Metrics {
     public static final AtomicLong explosionsInEmptySection = new AtomicLong();
     public static final AtomicLong entityRaycasts = new AtomicLong();
     public static final AtomicLong entityRaycastsSkipped = new AtomicLong();
-    public static final AtomicLong entityRays = new AtomicLong();
-    public static final AtomicDouble entityRaycastResultTotal = new AtomicDouble();
-    public static final AtomicLong entityRaycastResultIsAbsolute = new AtomicLong();
-    public static final AtomicLong entityRaycastResultLowRes = new AtomicLong();
+    public static final AtomicLong entityLowResRays = new AtomicLong();
+    public static final AtomicLong entityRegularResRays = new AtomicLong();
+    public static final AtomicDouble entityCoverResultTotal = new AtomicDouble();
+    public static final AtomicLong entityCoverResultIsAbsolute = new AtomicLong();
+    public static final AtomicLong entityCoverResultLowRes = new AtomicLong();
     public static final AtomicLong blockRaycasts = new AtomicLong();
     public static final AtomicLong blockRaycastsIntersectEmptySection = new AtomicLong();
 
@@ -43,25 +45,30 @@ public class Metrics {
                 double explosionEmptySectionPercent = ((double) explosionsInEmptySection.get() / explosions.get()) * 100;
                 double entityRaycastPerExplosionAvg = (double) entityRaycasts.get() / explosions.get();
                 double entityRaycastSkipPercent = ((double) entityRaycastsSkipped.get() / entityRaycasts.get()) * 100;
-                double raysPerExplosionAvg = (double) entityRays.get() / explosions.get();
-                double raysPerRaycastAvg = (double) entityRays.get() / entityRaycasts.get();
-                double entityRaycastResultAvg = (entityRaycastResultTotal.get() / entityRaycasts.get()) * 100;
-                double entityRaycastIsAbsolutePercent = ((double) entityRaycastResultIsAbsolute.get() / entityRaycasts.get()) * 100;
-                double entityRaycastLowResPercent = ((double) entityRaycastResultLowRes.get() / entityRaycasts.get()) * 100;
+                long entityRays = entityLowResRays.get() + entityRegularResRays.get();
+                double lowResRayPercent = ((double) entityLowResRays.get() / entityRays) * 100;
+                double regularResRayPercent = ((double) entityRegularResRays.get() / entityRays) * 100;
+                double raysPerExplosionAvg = (double) entityRays / explosions.get();
+                double raysPerRaycastAvg = (double) entityRays / entityRaycasts.get();
+                double entityCoverResultAvg = (entityCoverResultTotal.get() / entityRaycasts.get()) * 100;
+                double entityCoverIsAbsolutePercent = ((double) entityCoverResultIsAbsolute.get() / entityRaycasts.get()) * 100;
+                double entityRaycastLowResPercent = ((double) entityCoverResultLowRes.get() / entityRaycasts.get()) * 100;
 
                 ctx.getSource().sendMessage(title("Explodium Metrics"));
                 ctx.getSource().sendMessage(base().append(value(explosions)).append(" total explosions."));
                 ctx.getSource().sendMessage(base().append(value(explosionsInEmptySection)).append(" explosions in empty sections, or ").append(value("%.2f%%", explosionEmptySectionPercent)).append("."));
                 ctx.getSource().sendMessage(DIVIDER);
-                ctx.getSource().sendMessage(base().append(value(entityRaycasts)).append(" total entity raycasts issued."));
-                ctx.getSource().sendMessage(base().append(value("%.2f", entityRaycastPerExplosionAvg)).append(" entity raycasts issued per explosion average."));
-                ctx.getSource().sendMessage(base().append(value(entityRaycastsSkipped)).append(" total entity raycasts skipped from empty sections, or ").append(value("%.2f%%", entityRaycastSkipPercent)).append("."));
+                ctx.getSource().sendMessage(base().append(value(entityRaycasts)).append(" total entity cover raycasts issued."));
+                ctx.getSource().sendMessage(base().append(value("%.2f", entityRaycastPerExplosionAvg)).append(" average entity cover raycasts issued per explosion."));
+                ctx.getSource().sendMessage(base().append(value(entityRaycastsSkipped)).append(" total entity cover raycasts skipped from empty sections, or ").append(value("%.2f%%", entityRaycastSkipPercent)).append("."));
                 ctx.getSource().sendMessage(base().append(value(entityRays)).append(" total entity rays cast."));
-                ctx.getSource().sendMessage(base().append(value("%.2f", raysPerExplosionAvg)).append(" entity rays cast per explosion average."));
-                ctx.getSource().sendMessage(base().append(value("%.2f", raysPerRaycastAvg)).append(" entity rays cast per entity average."));
-                ctx.getSource().sendMessage(base().append(value("%.2f%%", entityRaycastResultAvg)).append(" entity raycast average result."));
-                ctx.getSource().sendMessage(base().append(value("%.2f%%", entityRaycastIsAbsolutePercent)).append(" entity raycast result is absolute (full cover or no cover)."));
-                ctx.getSource().sendMessage(base().append(value(entityRaycastResultLowRes)).append(" entity raycasts done with lowered resolution, or ").append(value("%.2f%%", entityRaycastLowResPercent)).append("."));
+                ctx.getSource().sendMessage(base().append(value(entityLowResRays)).append(" total low resolution entity rays cast, or ").append(value("%.2f%%", lowResRayPercent)).append("."));
+                ctx.getSource().sendMessage(base().append(value(entityRegularResRays)).append(" total regular resolution entity rays cast, or ").append(value("%.2f%%", regularResRayPercent)).append("."));
+                ctx.getSource().sendMessage(base().append(value("%.2f", raysPerExplosionAvg)).append(" average entity rays cast per explosion."));
+                ctx.getSource().sendMessage(base().append(value("%.2f", raysPerRaycastAvg)).append(" average entity rays cast per entity."));
+                ctx.getSource().sendMessage(base().append(value("%.2f%%", entityCoverResultAvg)).append(" average entity cover result."));
+                ctx.getSource().sendMessage(base().append(value("%.2f%%", entityCoverIsAbsolutePercent)).append(" entity cover is absolute (full cover or no cover)."));
+                ctx.getSource().sendMessage(base().append(value(entityCoverResultLowRes)).append(" entity cover raycasts done with lowered resolution, or ").append(value("%.2f%%", entityRaycastLowResPercent)).append("."));
                 ctx.getSource().sendMessage(DIVIDER);
                 ctx.getSource().sendMessage(base().append(value(blockRaycasts)).append(" total block raycasts."));
                 ctx.getSource().sendMessage(base().append(value(blockRaycastsIntersectEmptySection)).append(" times block raycasts intersected with empty sections."));
@@ -72,15 +79,19 @@ public class Metrics {
                 ctx.getSource().sendMessage(title("Entity Raycasts Issued"));
 
                 RAYS_PER_ENTITY.forEach((key, entry) -> {
-                    ctx.getSource().sendMessage(base()
+                    MutableText text = base()
                         .append(value(entry.normalResSamplePoints()))
                         .append("/")
-                        .append(value(entry.lowResSamplePoints()))
+                        .append(value(entry.lowResSamplePoints()).formatted(Formatting.YELLOW))
                         .append(" rays per ")
                         .append(key.getName())
                         .append(" entity (")
                         .append(value(entry.occurrences()))
-                        .append(" occurrences.)"));
+                        .append(ScreenTexts.SPACE)
+                        .append(entry.occurrences().get() == 1 ? "occurence" : " occurences")
+                        .append(".)");
+
+                    ctx.getSource().sendMessage(text);
                 });
 
                 return SINGLE_SUCCESS;
@@ -91,9 +102,9 @@ public class Metrics {
     public static void entityRaycastCallback(EntityType<?> entityType, float result) {
         entityRaycasts.getAndIncrement();
         RAYS_PER_ENTITY.computeIfAbsent(entityType, Metrics::createEntityEntry).occurrences().getAndIncrement();
-        entityRaycastResultTotal.getAndAdd(result);
+        entityCoverResultTotal.getAndAdd(result);
         if (result == 0f || result == 1f) {
-            entityRaycastResultIsAbsolute.getAndIncrement();
+            entityCoverResultIsAbsolute.getAndIncrement();
         }
     }
 
@@ -101,17 +112,17 @@ public class Metrics {
         return Text.empty().setStyle(Style.EMPTY.withColor(Formatting.GRAY));
     }
 
-    private static Text title(String text) {
+    private static MutableText title(String text) {
         return base()
             .append(Text.literal(text).setStyle(Style.EMPTY.withColor(TextColor.fromRgb(16351261)).withUnderline(true)))
             .append(":");
     }
 
-    private static Text value(String pattern, Object... arguments) {
+    private static MutableText value(String pattern, Object... arguments) {
         return value(String.format(pattern, arguments));
     }
 
-    private static Text value(@Nullable Object object) {
+    private static MutableText value(@Nullable Object object) {
         return Text.literal(String.valueOf(object))
             .setStyle(Style.EMPTY.withColor(Formatting.GREEN));
     }

@@ -1,6 +1,7 @@
 package io.github.racoondog.explodium.mixin.lowres_raycast;
 
 import io.github.racoondog.explodium.Config;
+import io.github.racoondog.explodium.Reflect;
 import net.caffeinemc.mods.lithium.common.util.Pos;
 import net.caffeinemc.mods.lithium.common.world.explosions.MutableExplosionClipContext;
 import net.minecraft.block.BlockState;
@@ -64,7 +65,9 @@ public class ExplosionImplMixin {
         // Regular resolution raycast
         // todo investigate why low res can return partial cover, but regular res returns absolute cover
 
-        return calculateReceivedDamageRegularRes(box, context, blockHitFactory, xDiff, yDiff, zDiff, xStep, yStep, zStep);
+        Reflect.noopTarget();
+
+        return calculateReceivedDamageGeneric(box, context, blockHitFactory, xDiff, yDiff, zDiff, xStep, yStep, zStep);
     }
 
     /**
@@ -77,7 +80,7 @@ public class ExplosionImplMixin {
         double yStepLowRes = Math.min(1.0, yStep * Config.LOW_RES_DISTANCE_MULT);
         double zStepLowRes = Math.min(1.0, zStep * Config.LOW_RES_DISTANCE_MULT);
 
-        return calculateReceivedDamageRegularRes(box, context, blockHitFactory, xDiff, yDiff, zDiff, xStepLowRes, yStepLowRes, zStepLowRes);
+        return calculateReceivedDamageGeneric(box, context, blockHitFactory, xDiff, yDiff, zDiff, xStepLowRes, yStepLowRes, zStepLowRes);
     }
 
     /**
@@ -85,7 +88,7 @@ public class ExplosionImplMixin {
      * @author Crosby
      */
     @Unique
-    private static float calculateReceivedDamageRegularRes(Box box, MutableExplosionClipContext context, BiFunction<MutableExplosionClipContext, BlockPos, BlockHitResult> blockHitFactory, double xDiff, double yDiff, double zDiff, double xStep, double yStep, double zStep) {
+    private static float calculateReceivedDamageGeneric(Box box, MutableExplosionClipContext context, BiFunction<MutableExplosionClipContext, BlockPos, BlockHitResult> blockHitFactory, double xDiff, double yDiff, double zDiff, double xStep, double yStep, double zStep) {
         double xOffset = (1.0 - Math.floor(1.0 / xStep) * xStep) / 2.0;
         double zOffset = (1.0 - Math.floor(1.0 / zStep) * zStep) / 2.0;
 
