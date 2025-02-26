@@ -1,11 +1,15 @@
 {
-	"required": true,
-	"package": "io.github.racoondog.explodium.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"mixins": [
-        "ExplosionImplMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
+    "required": true,
+    "package": "io.github.racoondog.explodium.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "plugin": "io.github.racoondog.explodium.ExplodiumMixinPlugin",
+    "mixins": [
+        "ExplosionImplMixin",
+        "empty_sections.ExplosionImplMixin",
+        "lowres_raycast.ExplosionImplMixin",
+        "metrics.ExplosionImplMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
 	}
 }

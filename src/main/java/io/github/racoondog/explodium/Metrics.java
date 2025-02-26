@@ -5,7 +5,6 @@ import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
@@ -24,8 +23,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class Metrics {
+    private static final Text DIVIDER = Text.literal(" -------------------").formatted(Formatting.DARK_GRAY);
     private static final ConcurrentHashMap<EntityType<?>, EntityEntry> RAYS_PER_ENTITY = new ConcurrentHashMap<>();
-    public static final boolean CAPTURE_METRICS = FabricLoader.getInstance().isDevelopmentEnvironment() || Boolean.getBoolean("explodium.metrics");
 
     public static final AtomicLong explosions = new AtomicLong();
     public static final AtomicLong explosionsInEmptySection = new AtomicLong();
@@ -53,7 +52,7 @@ public class Metrics {
                 ctx.getSource().sendMessage(title("Explodium Metrics"));
                 ctx.getSource().sendMessage(base().append(value(explosions)).append(" total explosions."));
                 ctx.getSource().sendMessage(base().append(value(explosionsInEmptySection)).append(" explosions in empty sections, or ").append(value("%.2f%%", explosionEmptySectionPercent)).append("."));
-                ctx.getSource().sendMessage(divider());
+                ctx.getSource().sendMessage(DIVIDER);
                 ctx.getSource().sendMessage(base().append(value(entityRaycasts)).append(" total entity raycasts issued."));
                 ctx.getSource().sendMessage(base().append(value("%.2f", entityRaycastPerExplosionAvg)).append(" entity raycasts issued per explosion average."));
                 ctx.getSource().sendMessage(base().append(value(entityRaycastsSkipped)).append(" total entity raycasts skipped from empty sections, or ").append(value("%.2f%%", entityRaycastSkipPercent)).append("."));
@@ -63,7 +62,7 @@ public class Metrics {
                 ctx.getSource().sendMessage(base().append(value("%.2f%%", entityRaycastResultAvg)).append(" entity raycast average result."));
                 ctx.getSource().sendMessage(base().append(value("%.2f%%", entityRaycastIsAbsolutePercent)).append(" entity raycast result is absolute (full cover or no cover)."));
                 ctx.getSource().sendMessage(base().append(value(entityRaycastResultLowRes)).append(" entity raycasts done with lowered resolution, or ").append(value("%.2f%%", entityRaycastLowResPercent)).append("."));
-                ctx.getSource().sendMessage(divider());
+                ctx.getSource().sendMessage(DIVIDER);
                 ctx.getSource().sendMessage(base().append(value(blockRaycasts)).append(" total block raycasts."));
                 ctx.getSource().sendMessage(base().append(value(blockRaycastsIntersectEmptySection)).append(" times block raycasts intersected with empty sections."));
 
@@ -98,10 +97,6 @@ public class Metrics {
         }
     }
 
-    private static Text divider() {
-        return Text.literal(" -------------------").formatted(Formatting.DARK_GRAY);
-    }
-
     private static MutableText base() {
         return Text.empty().setStyle(Style.EMPTY.withColor(Formatting.GRAY));
     }
@@ -123,18 +118,31 @@ public class Metrics {
 
     private static <T extends Entity> EntityEntry createEntityEntry(EntityType<T> entityType) {
         EntityDimensions dimensions = entityType.getDimensions();
-        double xStep = 1.0 / (dimensions.width() * 2.0 + 1.0);
-        double yStep = 1.0 / (dimensions.height() * 2.0 + 1.0);
-        double zStep = 1.0 / (dimensions.width() * 2.0 + 1.0);
+
+        int normalResSamplePoints = getSamplePoints(dimensions.width(), dimensions.height());
+        int lowResSamplePoints = getLowResSamplePoints(dimensions.width(), dimensions.height());
+
+        return new EntityEntry(normalResSamplePoints, lowResSamplePoints, new AtomicLong());
+    }
+
+    public static int getSamplePoints(double width, double height) {
+        double xStep = 1.0 / (width * 2.0 + 1.0);
+        double yStep = 1.0 / (height * 2.0 + 1.0);
+        double zStep = 1.0 / (width * 2.0 + 1.0);
+
+        return MathHelper.ceil(1 / xStep) * MathHelper.ceil(1 / yStep) * MathHelper.ceil(1 / zStep);
+    }
+
+    public static int getLowResSamplePoints(double width, double height) {
+        double xStep = 1.0 / (width * 2.0 + 1.0);
+        double yStep = 1.0 / (height * 2.0 + 1.0);
+        double zStep = 1.0 / (width * 2.0 + 1.0);
 
         double xStepLowRes = Math.min(1.0, xStep * 3.0 / 2.0);
         double yStepLowRes = Math.min(1.0, yStep * 3.0 / 2.0);
         double zStepLowRes = Math.min(1.0, zStep * 3.0 / 2.0);
 
-        int normalResSamplePoints = MathHelper.ceil(1 / xStep) * MathHelper.ceil(1 / yStep) * MathHelper.ceil(1 / zStep);
-        int lowResSamplePoints = MathHelper.ceil(1 / xStepLowRes) * MathHelper.ceil(1 / yStepLowRes) * MathHelper.ceil(1 / zStepLowRes);
-
-        return new EntityEntry(normalResSamplePoints, lowResSamplePoints, new AtomicLong());
+        return MathHelper.ceil(1 / xStepLowRes) * MathHelper.ceil(1 / yStepLowRes) * MathHelper.ceil(1 / zStepLowRes);
     }
 
     private static LiteralArgumentBuilder<ServerCommandSource> literal(String name) {
